@@ -181,5 +181,30 @@ class _ReportScreenState extends State<ReportScreen> {
       ])),
     );
   }
+  void _showDetail(Map<String, dynamic> sale) {
+    final customer = sale['student_name'] ?? sale['custom_customer_name'] ?? 'Umum';
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(sale['number']?.toString() ?? 'Detail Transaksi'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tanggal: ${sale['sale_date'] ?? '-'}'),
+            Text('Pelanggan: $customer'),
+            Text('Jumlah item: ${sale['total_items'] ?? 0}'),
+            Text('Total: ${rupiah(sale['total_amount'] ?? 0)}'),
+            Text('Laba: ${rupiah(sale['profit'] ?? 0)}'),
+            Text('Metode: ${sale['payment_method'] ?? '-'}'),
+            Text('Status: ${sale['status'] ?? '-'}'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Tutup')),
+        ],
+      ),
+    );
+  }
   Widget _stat(String t,String v,String sub,Color c)=> Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[ Text(t, style: const TextStyle(fontSize:11, color: Colors.black54), maxLines:1, overflow: TextOverflow.ellipsis), const SizedBox(height:4), Text(v, style: TextStyle(fontWeight: FontWeight.bold, color:c, fontSize:12), maxLines:2, overflow: TextOverflow.ellipsis), Text(sub, style: const TextStyle(fontSize:10, color: Colors.black38), maxLines:1, overflow: TextOverflow.ellipsis) ])));
 }
