@@ -97,7 +97,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       child: ListTile(
                         title: Text(prod['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(
-                          '\${prod['code']} \u2022 \${prod['category']} \u2022 \${prod['unit']}\nModal \${rupiah(prod['cost_price'])} \u2022 Jual \${rupiah(prod['selling_price'])}',
+                          "${prod['code']} \u2022 ${prod['category']} \u2022 ${prod['unit']}\nModal ${rupiah(prod['cost_price'])} \u2022 Jual ${rupiah(prod['selling_price'])}",
                         ),
                         isThreeLine: true,
                         trailing: Column(
