@@ -22,6 +22,17 @@ jobs:
             cp /tmp/tmp_flutter/analysis_options.yaml ./analysis_options.yaml 2>/dev/null || true
           fi
           flutter pub get
+      - name: Patch compileSdk to 35
+        run: |
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/compileSdkVersion.*/compileSdkVersion 35/' android/app/build.gradle
+            sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle
+          fi
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/compileSdkVersion.*/compileSdkVersion = 35/' android/app/build.gradle.kts
+            sed -i 's/compileSdk = .*/compileSdk = 35/' android/app/build.gradle.kts
+          fi
+          if [ -f android/local.properties ]; then cat android/local.properties; fi
       - name: Build APK release
         run: flutter build apk --release
       - name: Upload APK

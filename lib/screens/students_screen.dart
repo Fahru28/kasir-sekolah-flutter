@@ -31,6 +31,43 @@ class _StudentsScreenState extends State<StudentsScreen> {
       ]),
     );
   }
+
+  Future<void> _downloadTemplate() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Siswa'];
+    sheet.appendRow([TextCellValue('Kode'), TextCellValue('NIS'), TextCellValue('Nama'), TextCellValue('Kelas'), TextCellValue('Nama Wali'), TextCellValue('WA'), TextCellValue('Alamat')]);
+    sheet.appendRow([TextCellValue('A-011'), TextCellValue('1011'), TextCellValue('Contoh Siswa'), TextCellValue('1A'), TextCellValue('Wali Contoh'), TextCellValue('08123456700'), TextCellValue('Jl. Contoh 1')]);
+    final bytes = excel.save();
+    if (bytes == null) return;
+    final result = await FilePicker.platform.saveFile(dialogTitle: 'Simpan Template Siswa', fileName: 'template_siswa.xlsx', bytes: Uint8List.fromList(bytes));
+    if (result != null && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tersimpan: \$result')));
+  }
+
+  Future<void> _importExcel() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx'], withData: true);
+    if (result == null || result.files.single.bytes == null) return;
+    final excel = Excel.decodeBytes(result.files.single.bytes!);
+    final sheet = excel.tables[excel.tables.keys.first]!;
+    final db = await AppDatabase.database;
+    int ok = 0;
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      String cv(int idx) => row.length > idx && row[idx]?.value != null ? row[idx]!.value.toString().trim() : '';
+      if (cv(2).isEmpty) continue;
+      try {
+        await db.insert('students', {
+          'code': cv(0).isEmpty ? 'A-\${DateTime.now().millisecondsSinceEpoch}' : cv(0),
+          'nis': cv(1), 'name': cv(2), 'class_name': cv(3).isEmpty ? '1A' : cv(3),
+          'guardian_name': cv(4), 'phone': cv(5), 'address': cv(6),
+          'active': 1, 'created_at': DateTime.now().toIso8601String(), 'updated_at': DateTime.now().toIso8601String(),
+        });
+        ok++;
+      } catch (_) {}
+    }
+    _load();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import selesai: \$ok baris')));
+  }
+
   void _add(){
     final code=TextEditingController(), nis=TextEditingController(), name=TextEditingController(), kelas=TextEditingController(text:'1A'), wali=TextEditingController(), wa=TextEditingController(), alamat=TextEditingController();
     showDialog(context: context, builder:(_)=> AlertDialog(title: const Text('Tambah Siswa'), content: SingleChildScrollView(child: Column(children:[

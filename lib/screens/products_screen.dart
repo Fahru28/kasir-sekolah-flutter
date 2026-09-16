@@ -44,6 +44,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ]),
     );
   }
+
+  Future<void> _downloadTemplate() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Barang'];
+    sheet.appendRow([TextCellValue('Kode'), TextCellValue('Nama'), TextCellValue('Kategori'), TextCellValue('Satuan'), TextCellValue('Harga Modal'), TextCellValue('Harga Jual'), TextCellValue('Stok Awal'), TextCellValue('Min Stok')]);
+    sheet.appendRow([TextCellValue('B-016'), TextCellValue('Contoh Barang'), TextCellValue('Alat Tulis'), TextCellValue('Pcs'), IntCellValue(5000), IntCellValue(7000), IntCellValue(20), IntCellValue(5)]);
+    final bytes = excel.save();
+    if (bytes == null) return;
+    final result = await FilePicker.platform.saveFile(dialogTitle: 'Simpan Template Barang', fileName: 'template_barang.xlsx', bytes: Uint8List.fromList(bytes));
+    if (result != null && context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tersimpan: \$result')));
+  }
+
+  Future<void> _importExcel() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx'], withData: true);
+    if (result == null || result.files.single.bytes == null) return;
+    final excel = Excel.decodeBytes(result.files.single.bytes!);
+    final sheet = excel.tables[excel.tables.keys.first]!;
+    final db = await AppDatabase.database;
+    int ok = 0;
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      String cv(int idx) => row.length > idx && row[idx]?.value != null ? row[idx]!.value.toString().trim() : '';
+      if (cv(0).isEmpty || cv(1).isEmpty) continue;
+      try {
+        await db.insert('products', {
+          'code': cv(0), 'name': cv(1), 'category': cv(2).isEmpty ? 'Lain-lain' : cv(2),
+          'unit': cv(3).isEmpty ? 'Pcs' : cv(3),
+          'cost_price': int.tryParse(cv(4)) ?? 0, 'selling_price': int.tryParse(cv(5)) ?? 0,
+          'initial_stock': int.tryParse(cv(6)) ?? 0, 'min_stock': int.tryParse(cv(7)) ?? 5,
+          'created_at': DateTime.now().toIso8601String(), 'updated_at': DateTime.now().toIso8601String(),
+        });
+        ok++;
+      } catch (_) {}
+    }
+    _load();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import selesai: \$ok baris')));
+  }
+
   void _addDialog(){
     final code=TextEditingController(), name=TextEditingController(), cat=TextEditingController(text:'Alat Tulis'), unit=TextEditingController(text:'Pcs'), modal=TextEditingController(), jual=TextEditingController(), awal=TextEditingController(text:'0'), min=TextEditingController(text:'5');
     showDialog(context: context, builder:(_)=> AlertDialog(title: const Text('Tambah Barang'), content: SingleChildScrollView(child: Column(children:[

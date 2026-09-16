@@ -111,7 +111,7 @@ class _KasirScreenState extends State<KasirScreen> {
   @override Widget build(BuildContext context){
     final kembalian = (int.tryParse(bayarCtrl.text.replaceAll(RegExp(r'[^0-9]'),''))??0) - total;
     return Scaffold(
-      appBar: AppBar(title: const Text('Kasir'), actions:[ IconButton(icon: const Badge(label: Text('')), onPressed: (){}, icon: const Icon(Icons.shopping_cart))]),
+      appBar: AppBar(title: const Text('Kasir'), actions:[ Padding(padding: const EdgeInsets.only(right:4), child: Badge(label: Text(keranjang.length.toString()), isLabelVisible: keranjang.isNotEmpty, child: IconButton(icon: const Icon(Icons.shopping_cart), onPressed: (){})))]),
       body: Column(children:[
         Card(margin: const EdgeInsets.all(12), child: Padding(padding: const EdgeInsets.all(12), child: Column(children:[
           InkWell(onTap: _pickSiswa, child: InputDecorator(decoration: const InputDecoration(labelText:'Siswa / Pelanggan', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person)), child: Text(studentName ?? 'Umum - ketuk untuk pilih siswa'))),
