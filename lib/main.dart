@@ -25,8 +25,9 @@ class KasirApp extends StatelessWidget {
 class HomeTabs extends StatefulWidget { const HomeTabs({super.key}); @override State<HomeTabs> createState()=> _HomeTabsState();}
 class _HomeTabsState extends State<HomeTabs> {
   int idx=0;
-  final pages=const [DashboardScreen(), KasirScreen(), ProductsScreen(), StudentsScreen(), SalesScreen(), DebtScreen(), StockScreen(), ReportScreen()];
+  void goToKasir(){ setState(()=> idx=1); }
   @override Widget build(BuildContext context){
+    final pages=[DashboardScreen(onKasir: goToKasir), const KasirScreen(), const ProductsScreen(), const StudentsScreen(), const SalesScreen(), const DebtScreen(), const StockScreen(), const ReportScreen()];
     return Scaffold(
       body: pages[idx],
       bottomNavigationBar: NavigationBar(

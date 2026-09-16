@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../db/app_database.dart';
 import '../utils/format.dart';
-class DashboardScreen extends StatefulWidget { const DashboardScreen({super.key}); @override State<DashboardScreen> createState()=> _DashboardScreenState(); }
+class DashboardScreen extends StatefulWidget { final VoidCallback? onKasir; const DashboardScreen({super.key, this.onKasir}); @override State<DashboardScreen> createState()=> _DashboardScreenState(); }
 class _DashboardScreenState extends State<DashboardScreen> {
   Map<String,int> stats={'harian':0,'transaksi':0,'profit':0,'piutang':0,'tipis':0};
   @override void initState(){ super.initState(); _load();}
@@ -31,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _card(Icons.inventory_2,'Stok Menipis','${stats['tipis']} barang',Colors.red),
       ]),
       const SizedBox(height:16),
-      FilledButton.icon(onPressed: ()=> DefaultTabController.of(context)?.animateTo(1), icon: const Icon(Icons.point_of_sale), label: const Text('Buka Kasir')),
+      FilledButton.icon(onPressed: (){ if(widget.onKasir!=null) widget.onKasir!(); else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buka tab Kasir di bawah'))); }, icon: const Icon(Icons.point_of_sale), label: const Text('Buka Kasir')),
     ]));
   }
   Widget _card(IconData icon,String title,String value,Color c){

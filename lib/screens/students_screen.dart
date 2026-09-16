@@ -63,7 +63,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   child: ListTile(
                     leading: CircleAvatar(child: Text((s['name'] as String).substring(0, 1))),
                     title: Text(s['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("\${s['code']} \u2022 NIS \${s['nis']} \u2022 Kelas \${s['class_name']}\nWali: \${s['guardian_name']} \u2022 \${s['phone']}"),
+                    subtitle: Text("NIS \${s['nis']} \u2022 Kelas \${s['class_name']}\nWali: \${s['guardian_name']} \u2022 \${s['phone']}"),
                     isThreeLine: true,
                     trailing: Chip(
                       label: Text((s['active'] as int) == 1 ? 'Aktif' : 'Nonaktif'),
@@ -197,33 +197,64 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   void _edit(Map<String, dynamic> s) {
+    final nis = TextEditingController(text: s['nis'] as String);
     final name = TextEditingController(text: s['name'] as String);
+    final kelas = TextEditingController(text: s['class_name'] as String);
+    final wali = TextEditingController(text: s['guardian_name'] as String);
+    final wa = TextEditingController(text: s['phone'] as String);
+    final alamat = TextEditingController(text: s['address'] as String);
+    bool aktif = (s['active'] as int) == 1;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(s['name'] as String),
-        content: TextField(controller: name, decoration: const InputDecoration(labelText: 'Nama')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () async {
-              final db = await AppDatabase.database;
-              await db.update('students', {'name': name.text}, where: 'id=?', whereArgs: [s['id']]);
-              if (context.mounted) Navigator.pop(context);
-              _load();
-            },
-            child: const Text('Simpan'),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(s['name'] as String),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nis, decoration: const InputDecoration(labelText: 'NIS')),
+                TextField(controller: name, decoration: const InputDecoration(labelText: 'Nama *')),
+                TextField(controller: kelas, decoration: const InputDecoration(labelText: 'Kelas')),
+                TextField(controller: wali, decoration: const InputDecoration(labelText: 'Nama Wali')),
+                TextField(controller: wa, decoration: const InputDecoration(labelText: 'WA')),
+                TextField(controller: alamat, decoration: const InputDecoration(labelText: 'Alamat')),
+                const SizedBox(height: 8),
+                SwitchListTile(value: aktif, title: Text(aktif ? 'Aktif' : 'Nonaktif'), onChanged: (v) => setS(() => aktif = v)),
+                const SizedBox(height: 4),
+                Text('Kode: ${s['code']}  •  NIS: ${s['nis']}', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () async {
-              final db = await AppDatabase.database;
-              await db.delete('students', where: 'id=?', whereArgs: [s['id']]);
-              if (context.mounted) Navigator.pop(context);
-              _load();
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+            FilledButton(
+              onPressed: () async {
+                if (name.text.trim().isEmpty) return;
+                final db = await AppDatabase.database;
+                await db.update('students', {'nis': nis.text.trim(), 'name': name.text.trim(), 'class_name': kelas.text.trim(), 'guardian_name': wali.text.trim(), 'phone': wa.text.trim(), 'address': alamat.text.trim(), 'active': aktif ? 1 : 0, 'updated_at': DateTime.now().toIso8601String()}, where: 'id=?', whereArgs: [s['id']]);
+                if (context.mounted) Navigator.pop(context);
+                _load();
+              },
+              child: const Text('Simpan'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Hapus Siswa?'), content: Text('${s['name']} akan dihapus'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Hapus'))]));
+                if (ok != true) return;
+                try {
+                  final db = await AppDatabase.database;
+                  await db.delete('students', where: 'id=?', whereArgs: [s['id']]);
+                  if (context.mounted) Navigator.pop(context);
+                  _load();
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal hapus: masih dipakai transaksi')));
+                }
+              },
+              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
       ),
     );
   }

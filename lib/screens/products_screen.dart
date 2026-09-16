@@ -100,19 +100,38 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           "${prod['code']} \u2022 ${prod['category']} \u2022 ${prod['unit']}\nModal ${rupiah(prod['cost_price'])} \u2022 Jual ${rupiah(prod['selling_price'])}",
                         ),
                         isThreeLine: true,
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('$stok',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: stok <= 0 ? Colors.red : low ? Colors.orange : Colors.green,
-                                    fontSize: 18)),
-                            Text(stok <= 0 ? 'Habis' : low ? 'Menipis' : 'Aman',
-                                style: TextStyle(fontSize: 11, color: stok <= 0 ? Colors.red : low ? Colors.orange : Colors.green)),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('$stok',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: stok <= 0 ? Colors.red : low ? Colors.orange : Colors.green,
+                                        fontSize: 18)),
+                                Text(stok <= 0 ? 'Habis' : low ? 'Menipis' : 'Aman',
+                                    style: TextStyle(fontSize: 11, color: stok <= 0 ? Colors.red : low ? Colors.orange : Colors.green)),
+                              ],
+                            ),
+                            const SizedBox(width: 6),
+                            PopupMenuButton<String>(
+                              onSelected: (v) {
+                                if (v == 'edit') _editBarang(prod);
+                                else if (v == 'stok') _editStok(prod, stok);
+                                else if (v == 'hapus') _hapusBarang(prod);
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 16), SizedBox(width: 8), Text('Edit')])),
+                                PopupMenuItem(value: 'stok', child: Row(children: [Icon(Icons.add_box, size: 16), SizedBox(width: 8), Text('Tambah Stok')])),
+                                PopupMenuItem(value: 'hapus', child: Row(children: [Icon(Icons.delete, size: 16, color: Colors.red), SizedBox(width: 8), Text('Hapus', style: TextStyle(color: Colors.red))])),
+                              ],
+                            ),
                           ],
                         ),
-                        onTap: () => _editStok(prod, stok),
+                        onTap: () => _editBarang(prod),
+                        onLongPress: () => _editStok(prod, stok),
                       ),
                     );
                   },
@@ -243,6 +262,59 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
     );
+  }
+
+
+  void _editBarang(Map<String, dynamic> prod) {
+    final name = TextEditingController(text: prod['name'] as String);
+    final cat = TextEditingController(text: prod['category'] as String);
+    final unit = TextEditingController(text: prod['unit'] as String);
+    final modal = TextEditingController(text: (prod['cost_price'] as int).toString());
+    final jual = TextEditingController(text: (prod['selling_price'] as int).toString());
+    final min = TextEditingController(text: (prod['min_stock'] as int).toString());
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Edit - ${prod['name']}'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Nama')),
+              TextField(controller: cat, decoration: const InputDecoration(labelText: 'Kategori')),
+              TextField(controller: unit, decoration: const InputDecoration(labelText: 'Satuan')),
+              TextField(controller: modal, decoration: const InputDecoration(labelText: 'Harga Modal'), keyboardType: TextInputType.number),
+              TextField(controller: jual, decoration: const InputDecoration(labelText: 'Harga Jual'), keyboardType: TextInputType.number),
+              TextField(controller: min, decoration: const InputDecoration(labelText: 'Min Stok'), keyboardType: TextInputType.number),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () async {
+              final db = await AppDatabase.database;
+              await db.update('products', {'name': name.text, 'category': cat.text, 'unit': unit.text, 'cost_price': int.tryParse(modal.text) ?? 0, 'selling_price': int.tryParse(jual.text) ?? 0, 'min_stock': int.tryParse(min.text) ?? 5, 'updated_at': DateTime.now().toIso8601String()}, where: 'id=?', whereArgs: [prod['id']]);
+              if (context.mounted) Navigator.pop(context);
+              _load();
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _hapusBarang(Map<String, dynamic> prod) async {
+    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Hapus Barang?'), content: Text('${prod['code']} - ${prod['name']} akan dihapus. Tidak bisa jika masih dipakai transaksi.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')), FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Hapus'))]));
+    if (ok != true) return;
+    try {
+      final db = await AppDatabase.database;
+      await db.delete('products', where: 'id=?', whereArgs: [prod['id']]);
+      _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Barang dihapus')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal hapus: masih dipakai transaksi/pesanan')));
+    }
   }
 
   void _editStok(Map<String, dynamic> prod, int stok) {

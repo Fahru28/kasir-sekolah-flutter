@@ -94,7 +94,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ['Total Omzet', rupiah(totalOmzet), 'Tunai', rupiah(tunai)],
           ['Total Transaksi', '$totalTrx trx', 'Transfer/QRIS', rupiah(transfer)],
           ['Total Keuntungan', rupiah(totalProfit), 'Piutang', rupiah(piutang)],
-          ['Margin', totalOmzet>0 ? '${(totalProfit/totalOmzet*100).toStringAsFixed(1)}%' : '-', 'Barang terlaris', topProducts.map((e)=> '${e.key} (${e.value})').join(', ')],
+          ['Margin', totalOmzet>0 ? '${(totalProfit/totalOmzet*100).toStringAsFixed(1)}%' : '-', 'Barang terlaris', topProducts.isEmpty? '-' : (topProducts.map((e)=> '${e.key} (${e.value})').join(', ').length>45? topProducts.map((e)=> '${e.key} (${e.value})').join(', ').substring(0,45)+'...' : topProducts.map((e)=> '${e.key} (${e.value})').join(', '))],
         ],
       ),
       pw.SizedBox(height:12),
@@ -147,7 +147,7 @@ class _ReportScreenState extends State<ReportScreen> {
           FilledButton.icon(icon: const Icon(Icons.print, size:16), label: const Text('Cetak'), onPressed: _printPdf),
         ]),
         const SizedBox(height:12),
-        GridView.count(crossAxisCount:2, shrinkWrap:true, physics: const NeverScrollableScrollPhysics(), crossAxisSpacing:8, mainAxisSpacing:8, childAspectRatio:1.8, children:[
+        GridView.count(crossAxisCount:2, shrinkWrap:true, physics: const NeverScrollableScrollPhysics(), crossAxisSpacing:8, mainAxisSpacing:8, childAspectRatio:1.55, children:[
           _stat('Total Omzet', rupiah(totalOmzet), '$totalTrx transaksi', Colors.indigo),
           _stat('Total Keuntungan', rupiah(totalProfit), 'Laba kotor', Colors.green),
           _stat('Tunai / Transfer / Piutang', '${rupiah(tunai)} / ${rupiah(transfer)} / ${rupiah(piutang)}', 'Per metode', Colors.teal),
@@ -176,10 +176,10 @@ class _ReportScreenState extends State<ReportScreen> {
         const SizedBox(height:12),
         Text('Transaksi (${sales.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height:8),
-        ...sales.map((s)=> Card(child: ListTile(dense:true, title: Text(s['number'] as String, style: const TextStyle(fontFamily:'monospace', fontWeight: FontWeight.bold, fontSize:12)), subtitle: Text("${s['sale_date']} • ${s['student_name'] ?? s['custom_customer_name'] ?? 'Umum'} • ${s['total_items']} item"), trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children:[Text(rupiah(s['total_amount']), style: const TextStyle(fontWeight: FontWeight.bold, fontSize:12)), Text(s['status'] as String, style: TextStyle(fontSize:10, color: s['status']=='Lunas'? Colors.green : Colors.orange))])))),
+        ...sales.map((s)=> Card(child: ListTile(dense:true, title: Text(s['number'] as String, style: const TextStyle(fontFamily:'monospace', fontWeight: FontWeight.bold, fontSize:12)), subtitle: Text("${s['sale_date']} • ${s['student_name'] ?? s['custom_customer_name'] ?? 'Umum'} • ${s['total_items']} item"), trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children:[Text(rupiah(s['total_amount']), style: const TextStyle(fontWeight: FontWeight.bold, fontSize:12)), Text(s['status'] as String, style: TextStyle(fontSize:10, color: s['status']=='Lunas'? Colors.green : Colors.orange))]), onTap: ()=> _showDetail(s)))),
         if(sales.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Tidak ada penjualan pada periode ini'))),
       ])),
     );
   }
-  Widget _stat(String t,String v,String sub,Color c)=> Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[ Text(t, style: const TextStyle(fontSize:11, color: Colors.black54)), const SizedBox(height:4), Text(v, style: TextStyle(fontWeight: FontWeight.bold, color:c, fontSize:13)), Text(sub, style: const TextStyle(fontSize:10, color: Colors.black38)) ])));
+  Widget _stat(String t,String v,String sub,Color c)=> Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[ Text(t, style: const TextStyle(fontSize:11, color: Colors.black54), maxLines:1, overflow: TextOverflow.ellipsis), const SizedBox(height:4), Text(v, style: TextStyle(fontWeight: FontWeight.bold, color:c, fontSize:12), maxLines:2, overflow: TextOverflow.ellipsis), Text(sub, style: const TextStyle(fontSize:10, color: Colors.black38), maxLines:1, overflow: TextOverflow.ellipsis) ])));
 }
