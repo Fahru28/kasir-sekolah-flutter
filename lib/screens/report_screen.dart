@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../db/app_database.dart';
 import '../utils/format.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
 
 class ReportScreen extends StatefulWidget { const ReportScreen({super.key}); @override State<ReportScreen> createState()=> _ReportScreenState(); }
 class _ReportScreenState extends State<ReportScreen> {
@@ -68,87 +68,72 @@ class _ReportScreenState extends State<ReportScreen> {
     });
   }
 
-  Future<void> _printPdf() async {
-    final doc=pw.Document();
-    final fFmt=DateFormat('dd MMM yyyy', 'id_ID');
-    doc.addPage(pw.MultiPage(pageFormat: PdfPageFormat.a4, margin: const pw.EdgeInsets.all(24), build: (c)=> [
-      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children:[
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children:[
-          pw.Text('SIT INSANTAMA RANGKASBITUNG', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:14, color: PdfColor.fromHex('#4C3F6D'))),
-          pw.Text('Jl. Siliwangi, Kp. Cileuweung RT/RW 002/005, Kec. Rangkasbitung, Kab. Lebak, Banten', style: const pw.TextStyle(fontSize:7, color: PdfColors.grey700)),
-        ]),
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children:[
-          pw.Text('LAPORAN PENJUALAN', style: pw.TextStyle(fontWeight:pw.FontWeight.bold, fontSize:9)),
-          pw.Text('Periode: ${fFmt.format(from)} - ${fFmt.format(to)}', style: const pw.TextStyle(fontSize:8)),
-          pw.Text('Dicetak: ${fFmt.format(DateTime.now())} • $totalTrx transaksi', style: const pw.TextStyle(fontSize:7, color: PdfColors.grey600)),
-        ]),
-      ]),
-      pw.Divider(color: PdfColor.fromHex('#4C3F6D'), thickness:2),
-      pw.SizedBox(height:8),
-      pw.TableHelper.fromTextArray(
-        headers:['Ringkasan','Nilai','Rincian','Nilai'],
-        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:8, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey800),
-        cellStyle: const pw.TextStyle(fontSize:8),
-        data:[
-          ['Total Omzet', rupiah(totalOmzet), 'Tunai', rupiah(tunai)],
-          ['Total Transaksi', '$totalTrx trx', 'Transfer/QRIS', rupiah(transfer)],
-          ['Total Keuntungan', rupiah(totalProfit), 'Piutang', rupiah(piutang)],
-          ['Margin', totalOmzet>0 ? '${(totalProfit/totalOmzet*100).toStringAsFixed(1)}%' : '-', 'Barang terlaris', topProducts.isEmpty? '-' : (topProducts.map((e)=> '${e.key} (${e.value})').join(', ').length>45? topProducts.map((e)=> '${e.key} (${e.value})').join(', ').substring(0,45)+'...' : topProducts.map((e)=> '${e.key} (${e.value})').join(', '))],
-        ],
-      ),
-      pw.SizedBox(height:12),
-      pw.Text('Rincian per Kategori', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:9)),
-      pw.SizedBox(height:4),
-      pw.TableHelper.fromTextArray(
-        headers:['Kategori','Qty','Omzet','Laba'],
-        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:8, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey700),
-        cellStyle: const pw.TextStyle(fontSize:8),
-        data:[
-          ['Makanan & Minuman','${byCatMakanan['qty']} item', rupiah(byCatMakanan['omzet']), rupiah(byCatMakanan['profit'])],
-          ['Barang (ATK/Seragam)','${byCatBarang['qty']} item', rupiah(byCatBarang['omzet']), rupiah(byCatBarang['profit'])],
-          ['TOTAL','${(byCatMakanan['qty']!+byCatBarang['qty']!)} item', rupiah(byCatMakanan['omzet']!+byCatBarang['omzet']!), rupiah(byCatMakanan['profit']!+byCatBarang['profit']!)],
-        ],
-      ),
-      pw.SizedBox(height:12),
-      pw.Text('Detail Transaksi', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:9)),
-      pw.SizedBox(height:4),
-      pw.TableHelper.fromTextArray(
-        headers:['Tgl','No','Siswa','Item','Total','Laba','Metode','Status'],
-        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:7, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey800),
-        cellStyle: const pw.TextStyle(fontSize:7),
-        data: sales.map((s)=> [
-          s['sale_date'].toString(), s['number'].toString(), (s['student_name'] ?? s['custom_customer_name'] ?? 'Umum').toString(),
-          s['total_items'].toString(), rupiah(s['total_amount']), rupiah(s['profit']), s['payment_method'].toString(), s['status'].toString()
-        ]).toList(),
-      ),
-      pw.SizedBox(height:24),
-      pw.Align(alignment: pw.Alignment.centerRight, child: pw.Column(children:[
-        pw.Text('Rangkasbitung, ${fFmt.format(DateTime.now())}', style: const pw.TextStyle(fontSize:8)),
-        pw.SizedBox(height:28),
-        pw.Text('Kepala Unit / Bendahara', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize:8)),
-        pw.Text('SIT Insantama Rangkasbitung', style: const pw.TextStyle(fontSize:7, color: PdfColors.grey600)),
-      ])),
-    ]));
+  Future<void> _exportExcel() async {
     try {
-      await Printing.layoutPdf(onLayout: (f)=> doc.save());
+      final excel = Excel.createExcel();
+      // hapus sheet default Sheet1 jika ada
+      if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+      final ring = excel['Ringkasan'];
+      final fStr = DateFormat('dd MMM yyyy', 'id_ID').format(from);
+      final tStr = DateFormat('dd MMM yyyy', 'id_ID').format(to);
+      ring.appendRow(['Laporan Penjualan - SIT INSANTAMA RANGKASBITUNG']);
+      ring.appendRow(['Periode', '$fStr - $tStr']);
+      ring.appendRow(['Dicetak', DateFormat('dd MMM yyyy HH:mm', 'id_ID').format(DateTime.now()) + ' • $totalTrx transaksi']);
+      ring.appendRow([]);
+      ring.appendRow(['Ringkasan', 'Nilai', 'Rincian', 'Nilai']);
+      ring.appendRow(['Total Omzet', totalOmzet, 'Tunai', tunai]);
+      ring.appendRow(['Total Transaksi', totalTrx, 'Transfer/QRIS', transfer]);
+      ring.appendRow(['Total Keuntungan', totalProfit, 'Piutang', piutang]);
+      ring.appendRow(['Margin', totalOmzet>0 ? '${(totalProfit/totalOmzet*100).toStringAsFixed(1)}%' : '-', 'Barang terlaris', topProducts.isEmpty? '-' : topProducts.map((e)=> '${e.key} (${e.value})').join(', ')]);
+      ring.appendRow([]);
+      ring.appendRow(['Kategori', 'Qty item', 'Omzet', 'Laba']);
+      ring.appendRow(['Makanan & Minuman', byCatMakanan['qty'], byCatMakanan['omzet'], byCatMakanan['profit']]);
+      ring.appendRow(['Barang', byCatBarang['qty'], byCatBarang['omzet'], byCatBarang['profit']]);
+
+      final trx = excel['Transaksi'];
+      trx.appendRow(['No Transaksi','Tanggal','Pelanggan','Jml Item','Total','Metode','Status','Laba']);
+      for (var s in sales) {
+        trx.appendRow([s['number']?.toString() ?? '', s['sale_date']?.toString() ?? '', (s['student_name'] ?? s['custom_customer_name'] ?? 'Umum').toString(), s['total_items'] ?? 0, s['total_amount'] ?? 0, s['payment_method']?.toString() ?? '', s['status']?.toString() ?? '', s['profit'] ?? 0]);
+      }
+
+      // detail item per transaksi (ambil dari DB)
+      final db = await AppDatabase.database;
+      final det = excel['Detail_Item'];
+      det.appendRow(['No Transaksi','Tanggal','Barang','Qty','Harga','Subtotal','Laba Item']);
+      if (sales.isNotEmpty) {
+        final ids = sales.map((e)=> e['id']).toList();
+        final ph = List.filled(ids.length, '?').join(',');
+        final rows = await db.rawQuery('SELECT s.number as trx_no, s.sale_date as sale_date, p.name as pname, si.quantity as qty, si.selling_price as price, si.subtotal as sub, si.profit as pf FROM sale_items si JOIN sales s ON s.id=si.sale_id JOIN products p ON p.id=si.product_id WHERE si.sale_id IN ($ph) ORDER BY s.sale_date DESC, s.id DESC', ids);
+        for (var r in rows) {
+          det.appendRow([r['trx_no']?.toString() ?? '', r['sale_date']?.toString() ?? '', r['pname']?.toString() ?? '', r['qty'] ?? 0, r['price'] ?? 0, r['sub'] ?? 0, r['pf'] ?? 0]);
+        }
+      }
+
+      final bytes = excel.save();
+      if (bytes == null) throw Exception('Gagal membuat Excel');
+      final name = 'laporan_${DateFormat('yyyyMMdd').format(from)}_${DateFormat('yyyyMMdd').format(to)}.xlsx';
+      final path = await FilePicker.platform.saveFile(dialogTitle: 'Simpan Laporan', fileName: name, bytes: Uint8List.fromList(bytes));
+      if (path != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tersimpan: $path')));
+      } else if (path == null && mounted) {
+        // user batal - jangan tampilkan error
+      }
     } catch(e){
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal cetak: $e')));
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal export Excel: $e')));
     }
   }
 
   @override Widget build(BuildContext c){
+  @override Widget build(BuildContext c){
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporan Penjualan Harian'), actions:[IconButton(icon: const Icon(Icons.print), onPressed: _printPdf, tooltip:'Cetak PDF')]),
+      appBar: AppBar(title: const Text('Laporan Penjualan Harian'), actions:[IconButton(icon: const Icon(Icons.table_view), onPressed: _exportExcel, tooltip:'Export Excel')]),
       body: loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children:[
         Row(children:[
           Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.calendar_today, size:16), label: Text(DateFormat('dd/MM/yyyy').format(from)), onPressed: _pickFrom)),
           const SizedBox(width:8),
           Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.calendar_today, size:16), label: Text(DateFormat('dd/MM/yyyy').format(to)), onPressed: _pickTo)),
           const SizedBox(width:8),
-          FilledButton.icon(icon: const Icon(Icons.print, size:16), label: const Text('Cetak'), onPressed: _printPdf),
+          FilledButton.icon(icon: const Icon(Icons.table_view, size:16), label: const Text('Export Excel'), onPressed: _exportExcel),
         ]),
         const SizedBox(height:12),
         GridView.count(crossAxisCount:2, shrinkWrap:true, physics: const NeverScrollableScrollPhysics(), crossAxisSpacing:8, mainAxisSpacing:8, childAspectRatio:1.55, children:[
