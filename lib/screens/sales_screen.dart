@@ -66,7 +66,11 @@ class _SalesScreenState extends State<SalesScreen> {
         pw.Text("SIT Insantama", style: const pw.TextStyle(fontSize:7, color: PdfColors.grey600)),
       ])),
     ])));
-    await Printing.layoutPdf(onLayout: (f)=> doc.save());
+    try {
+      await Printing.layoutPdf(onLayout: (f)=> doc.save());
+    } catch(e){
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal cetak: $e')));
+    }
   }
 
   void _detail(Map<String,dynamic> s) async {

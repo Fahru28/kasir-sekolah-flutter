@@ -132,7 +132,11 @@ class _ReportScreenState extends State<ReportScreen> {
         pw.Text('SIT Insantama Rangkasbitung', style: const pw.TextStyle(fontSize:7, color: PdfColors.grey600)),
       ])),
     ]));
-    await Printing.layoutPdf(onLayout: (f)=> doc.save());
+    try {
+      await Printing.layoutPdf(onLayout: (f)=> doc.save());
+    } catch(e){
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal cetak: $e')));
+    }
   }
 
   @override Widget build(BuildContext c){
