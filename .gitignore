@@ -1,0 +1,11 @@
+.dart_tool/
+build/
+.pub-cache/
+.pub/
+*.lock
+android/app/release/
+ios/
+.macos/
+linux/
+windows/
+web/canvaskit/
