@@ -84,22 +84,22 @@ class _StudentsScreenState extends State<StudentsScreen> {
     final excel = Excel.createExcel();
     final sheet = excel['Siswa'];
     sheet.appendRow([
-      TextCellValue('Kode'),
-      TextCellValue('NIS'),
-      TextCellValue('Nama'),
-      TextCellValue('Kelas'),
-      TextCellValue('Nama Wali'),
-      TextCellValue('WA'),
-      TextCellValue('Alamat'),
+      'Kode',
+      'NIS',
+      'Nama',
+      'Kelas',
+      'Nama Wali',
+      'WA',
+      'Alamat',
     ]);
     sheet.appendRow([
-      TextCellValue('A-011'),
-      TextCellValue('1011'),
-      TextCellValue('Contoh Siswa'),
-      TextCellValue('1A'),
-      TextCellValue('Wali Contoh'),
-      TextCellValue('08123456700'),
-      TextCellValue('Jl. Contoh 1'),
+      'A-011',
+      '1011',
+      'Contoh Siswa',
+      '1A',
+      'Wali Contoh',
+      '08123456700',
+      'Jl. Contoh 1',
     ]);
     final bytes = excel.save();
     if (bytes == null) return;

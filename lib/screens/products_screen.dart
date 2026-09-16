@@ -129,24 +129,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final excel = Excel.createExcel();
     final sheet = excel['Barang'];
     sheet.appendRow([
-      TextCellValue('Kode'),
-      TextCellValue('Nama'),
-      TextCellValue('Kategori'),
-      TextCellValue('Satuan'),
-      TextCellValue('Harga Modal'),
-      TextCellValue('Harga Jual'),
-      TextCellValue('Stok Awal'),
-      TextCellValue('Min Stok'),
+      'Kode',
+      'Nama',
+      'Kategori',
+      'Satuan',
+      'Harga Modal',
+      'Harga Jual',
+      'Stok Awal',
+      'Min Stok',
     ]);
     sheet.appendRow([
-      TextCellValue('B-016'),
-      TextCellValue('Contoh Barang'),
-      TextCellValue('Alat Tulis'),
-      TextCellValue('Pcs'),
-      IntCellValue(5000),
-      IntCellValue(7000),
-      IntCellValue(20),
-      IntCellValue(5),
+      'B-016',
+      'Contoh Barang',
+      'Alat Tulis',
+      'Pcs',
+      5000,
+      7000,
+      20,
+      5,
     ]);
     final bytes = excel.save();
     if (bytes == null) return;
