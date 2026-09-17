@@ -12,10 +12,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final trxHari = _firstInt(await db.rawQuery("SELECT COUNT(*) FROM sales WHERE sale_date=?",[today]))??0;
     final profitHari = _firstInt(await db.rawQuery("SELECT COALESCE(SUM(profit),0) FROM sales WHERE sale_date=?",[today]))??0;
     final piutang = await AppDatabase.totalPiutang(db);
-    // stok menipis
-    final prods = await db.query('products');
+    // stok menipis - batch (cepat untuk ribuan barang)
+    final prods = await db.query('products', columns:['id','min_stock']);
+    final sm = await AppDatabase.stocksMap(db);
     int tipis=0;
-    for(var p in prods){ final sisa=await AppDatabase.sisaStok(db, p['id'] as int); if(sisa <= (p['min_stock'] as int)) tipis++; }
+    for(var p in prods){ final sisa=sm[p['id'] as int]??0; if(sisa <= (p['min_stock'] as int)) tipis++; }
     setState(()=> stats={'harian':penjualanHari,'transaksi':trxHari,'profit':profitHari,'piutang':piutang,'tipis':tipis});
   }
   int _firstInt(List<Map<String,dynamic>> r){ if(r.isEmpty) return 0; final v=r.first.values.first; if(v is int) return v; if(v is num) return v.toInt(); return 0; }

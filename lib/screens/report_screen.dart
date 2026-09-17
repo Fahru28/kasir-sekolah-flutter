@@ -124,7 +124,6 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   @override Widget build(BuildContext c){
-  @override Widget build(BuildContext c){
     return Scaffold(
       appBar: AppBar(title: const Text('Laporan Penjualan Harian'), actions:[IconButton(icon: const Icon(Icons.table_view), onPressed: _exportExcel, tooltip:'Export Excel')]),
       body: loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children:[
