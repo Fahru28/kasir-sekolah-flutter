@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 
 class AppDatabase {
   static Database? _db;
+  static void resetForRestore(){ _db=null; }
   static Future<Database> get database async {
     if (_db != null) return _db!;
     _db = await _initDB();

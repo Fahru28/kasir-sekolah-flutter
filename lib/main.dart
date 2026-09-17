@@ -7,6 +7,7 @@ import 'screens/sales_screen.dart';
 import 'screens/debt_screen.dart';
 import 'screens/stock_screen.dart';
 import 'screens/report_screen.dart';
+import 'screens/backup_screen.dart';
 
 void main() => runApp(const KasirApp());
 
@@ -27,7 +28,7 @@ class _HomeTabsState extends State<HomeTabs> {
   int idx=0;
   void goToKasir(){ setState(()=> idx=1); }
   @override Widget build(BuildContext context){
-    final pages=[DashboardScreen(onKasir: goToKasir), const KasirScreen(), const ProductsScreen(), const StudentsScreen(), const SalesScreen(), const DebtScreen(), const StockScreen(), const ReportScreen()];
+    final pages=[DashboardScreen(onKasir: goToKasir), const KasirScreen(), const ProductsScreen(), const StudentsScreen(), const SalesScreen(), const DebtScreen(), const StockScreen(), const ReportScreen(), const BackupScreen()];
     return Scaffold(
       body: pages[idx],
       bottomNavigationBar: NavigationBar(
@@ -42,6 +43,7 @@ class _HomeTabsState extends State<HomeTabs> {
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label:'Piutang'),
           NavigationDestination(icon: Icon(Icons.input_outlined), selectedIcon: Icon(Icons.input), label:'Masuk'),
           NavigationDestination(icon: Icon(Icons.assessment_outlined), selectedIcon: Icon(Icons.assessment), label:'Laporan'),
+          NavigationDestination(icon: Icon(Icons.backup_outlined), selectedIcon: Icon(Icons.backup), label:'Backup'),
         ],
       ),
     );
