@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../db/app_database.dart';
 import '../utils/format.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:typed_data';
 
 class ReportScreen extends StatefulWidget { const ReportScreen({super.key}); @override State<ReportScreen> createState()=> _ReportScreenState(); }
@@ -74,11 +76,11 @@ class _ReportScreenState extends State<ReportScreen> {
       // hapus sheet default Sheet1 jika ada
       if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
       final ring = excel['Ringkasan'];
-      final fStr = DateFormat('dd MMM yyyy', 'id_ID').format(from);
-      final tStr = DateFormat('dd MMM yyyy', 'id_ID').format(to);
+      final fStr = DateFormat('dd MMM yyyy').format(from);
+      final tStr = DateFormat('dd MMM yyyy').format(to);
       ring.appendRow(['Laporan Penjualan - SIT INSANTAMA RANGKASBITUNG']);
       ring.appendRow(['Periode', '$fStr - $tStr']);
-      ring.appendRow(['Dicetak', DateFormat('dd MMM yyyy HH:mm', 'id_ID').format(DateTime.now()) + ' • $totalTrx transaksi']);
+      ring.appendRow(['Dicetak', DateFormat('dd MMM yyyy HH:mm').format(DateTime.now()) + ' • $totalTrx transaksi']);
       ring.appendRow([]);
       ring.appendRow(['Ringkasan', 'Nilai', 'Rincian', 'Nilai']);
       ring.appendRow(['Total Omzet', totalOmzet, 'Tunai', tunai]);
@@ -112,11 +114,19 @@ class _ReportScreenState extends State<ReportScreen> {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Gagal membuat Excel');
       final name = 'laporan_${DateFormat('yyyyMMdd').format(from)}_${DateFormat('yyyyMMdd').format(to)}.xlsx';
-      final path = await FilePicker.platform.saveFile(dialogTitle: 'Simpan Laporan', fileName: name, bytes: Uint8List.fromList(bytes));
-      if (path != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tersimpan: $path')));
-      } else if (path == null && mounted) {
-        // user batal - jangan tampilkan error
+      try {
+        final path = await FilePicker.platform.saveFile(dialogTitle: 'Simpan Laporan', fileName: name, bytes: Uint8List.fromList(bytes));
+        if (path != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tersimpan: $path')));
+          return;
+        }
+      } catch (_) {}
+      // Fallback: share (Android 13+ sering blokir saveFile)
+      try {
+        final tmp = await File('${Directory.systemTemp.path}/$name').writeAsBytes(Uint8List.fromList(bytes));
+        await Share.shareXFiles([XFile(tmp.path)], text: 'Laporan Penjualan $name');
+      } catch (e2) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal simpan/share: \$e2')));
       }
     } catch(e){
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal export Excel: $e')));

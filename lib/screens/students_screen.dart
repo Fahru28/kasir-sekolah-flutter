@@ -114,7 +114,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   Future<void> _importExcel() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx'], withData: true);
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx','xls'], withData: true);
     if (result == null || result.files.single.bytes == null) return;
     final excel = Excel.decodeBytes(result.files.single.bytes!);
     final sheet = excel.tables[excel.tables.keys.first]!;
