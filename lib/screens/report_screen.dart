@@ -163,7 +163,7 @@ class _ReportScreenState extends State<ReportScreen> {
           ])))),
         ]),
         const SizedBox(height:12),
-        Text('Transaksi (${sales.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Row(children:[Expanded(child: Text('Transaksi (${sales.length})', style: const TextStyle(fontWeight: FontWeight.bold))), if(sales.length>=500) const Text('menampilkan 500 terbaru', style: TextStyle(fontSize:10, color: Colors.black45))]),
         const SizedBox(height:8),
         ...sales.map((s)=> Card(child: ListTile(dense:true, title: Text(s['number'] as String, style: const TextStyle(fontFamily:'monospace', fontWeight: FontWeight.bold, fontSize:12)), subtitle: Text("${s['sale_date']} • ${s['student_name'] ?? s['custom_customer_name'] ?? 'Umum'} • ${s['total_items']} item"), trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children:[Text(rupiah(s['total_amount']), style: const TextStyle(fontWeight: FontWeight.bold, fontSize:12)), Text(s['status'] as String, style: TextStyle(fontSize:10, color: s['status']=='Lunas'? Colors.green : Colors.orange))]), onTap: ()=> _showDetail(s)))),
         if(sales.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('Tidak ada penjualan pada periode ini'))),

@@ -6,20 +6,32 @@ class SalesScreen extends StatefulWidget { const SalesScreen({super.key}); @over
 class _SalesScreenState extends State<SalesScreen> {
   List<Map<String,dynamic>> data=[];
   @override void initState(){ super.initState(); _load();}
-  Future<void> _load() async { final db=await AppDatabase.database; data=await db.rawQuery('SELECT s.*, st.name as student_name FROM sales s LEFT JOIN students st ON st.id=s.student_id ORDER BY s.id DESC'); setState((){}); }
+  int _limit=50; bool _hasMore=true; bool _loadingMore=false;
+  Future<void> _load({bool more=false}) async {
+    if(!more){ _limit=50; _hasMore=true; }
+    if(_loadingMore) return;
+    _loadingMore=true; final db=await AppDatabase.database;
+    final rows=await db.rawQuery('SELECT s.*, st.name as student_name FROM sales s LEFT JOIN students st ON st.id=s.student_id ORDER BY s.id DESC LIMIT ?', [_limit+1]);
+    _hasMore = rows.length > _limit;
+    data = _hasMore ? rows.sublist(0,_limit) : rows;
+    _loadingMore=false; if(mounted) setState((){}); }
+  Future<void> _loadMore() async { if(!_hasMore) return; _limit+=50; await _load(more:true); }
   @override Widget build(BuildContext context){
-    return Scaffold(appBar: AppBar(title: const Text('Penjualan')), body: data.isEmpty? const Center(child: Text('Belum ada transaksi')): RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: data.length, itemBuilder:(_,i){
-      final s=data[i];
-      return Card(margin: const EdgeInsets.symmetric(horizontal:12, vertical:4), child: ListTile(
-        title: Text(s['number'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily:'monospace')),
-        subtitle: Text("${tgl(s['sale_date'] as String)} • ${s['student_name']?? s['custom_customer_name']?? 'Umum'} • ${s['total_items']} item • ${s['payment_method']}"),
-        trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children:[
-          Text(rupiah(s['total_amount']), style: const TextStyle(fontWeight: FontWeight.bold)),
-          Chip(label: Text(s['status'] as String, style: const TextStyle(fontSize:11)), backgroundColor: s['status']=='Lunas'? Colors.green.shade100: Colors.orange.shade100, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
-        ]),
-        onTap: ()=> _detail(s),
-      ));
-    })));
+    return Scaffold(appBar: AppBar(title: const Text('Penjualan')), body: data.isEmpty? const Center(child: Text('Belum ada transaksi')): Column(children:[
+      Expanded(child: RefreshIndicator(onRefresh: ()=> _load(), child: ListView.builder(itemCount: data.length, itemBuilder:(_,i){
+        final s=data[i];
+        return Card(margin: const EdgeInsets.symmetric(horizontal:12, vertical:4), child: ListTile(
+          title: Text(s['number'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily:'monospace')),
+          subtitle: Text("${tgl(s['sale_date'] as String)} • ${s['student_name']?? s['custom_customer_name']?? 'Umum'} • ${s['total_items']} item • ${s['payment_method']}"),
+          trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children:[
+            Text(rupiah(s['total_amount']), style: const TextStyle(fontWeight: FontWeight.bold)),
+            Chip(label: Text(s['status'] as String, style: const TextStyle(fontSize:11)), backgroundColor: s['status']=='Lunas'? Colors.green.shade100: Colors.orange.shade100, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+          ]),
+          onTap: ()=> _detail(s),
+        ));
+      }))),
+      if(_hasMore) Padding(padding: const EdgeInsets.all(12), child: Center(child: OutlinedButton.icon(onPressed: _loadMore, icon: const Icon(Icons.expand_more), label: Text('Muat 50 lagi (${data.length} tampil)')))),
+    ]));
   }
 
   void _detail(Map<String,dynamic> s) async {

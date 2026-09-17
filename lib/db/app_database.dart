@@ -10,7 +10,30 @@ class AppDatabase {
   }
   static Future<Database> _initDB() async {
     final path = join(await getDatabasesPath(), 'kasir_sekolah.db');
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _onUpgrade, onConfigure: (db) async {
+      await db.execute('PRAGMA journal_mode=WAL');
+      await db.execute('PRAGMA foreign_keys=ON');
+    }, onOpen: (db) async {
+      await db.execute('PRAGMA journal_mode=WAL');
+    });
+  }
+  static Future _onUpgrade(Database db, int oldV, int newV) async {
+    if (oldV < 2) await _createIndexes(db);
+  }
+  static Future _createIndexes(Database db) async {
+    // index paling penting untuk ribuan transaksi jangka panjang
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_sale_date ON sales(sale_date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_student ON sales(student_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_entries_product ON stock_entries(product_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_stock_entries_date ON stock_entries(entry_date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_debt_payments_sale ON debt_payments(sale_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_code ON products(code)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_students_code ON students(code)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_students_active ON students(active)');
   }
   static Future _createDB(Database db, int version) async {
     // students - sesuai schema.rb
@@ -148,6 +171,14 @@ class AppDatabase {
     // 2 Barang_Masuk seed
     await db.insert('stock_entries', {'number':'IN-001','entry_date':'2026-09-01','supplier':'Toko ATK','product_id':1,'quantity':50,'cost_price':3000,'note':'Stok Bulanan','created_at':now,'updated_at':now});
     await db.insert('stock_entries', {'number':'IN-002','entry_date':'2026-09-01','supplier':'Toko ATK','product_id':2,'quantity':100,'cost_price':1000,'note':'Stok Bulanan','created_at':now,'updated_at':now});
+  }
+  static Future<Map<int,int>> stocksMap(Database db) async {
+    final prods = await db.query('products', columns:['id','initial_stock']);
+    final masukRows = await db.rawQuery('SELECT product_id as pid, COALESCE(SUM(quantity),0) as tot FROM stock_entries GROUP BY product_id');
+    final keluarRows = await db.rawQuery('SELECT product_id as pid, COALESCE(SUM(quantity),0) as tot FROM sale_items GROUP BY product_id');
+    final masuk = {for(var r in masukRows) (r['pid'] as int): (r['tot'] as int? ?? 0)};
+    final keluar = {for(var r in keluarRows) (r['pid'] as int): (r['tot'] as int? ?? 0)};
+    return {for(var p in prods) (p['id'] as int): ((p['initial_stock'] as int? ?? 0) + (masuk[p['id']] ?? 0) - (keluar[p['id']] ?? 0))};
   }
   static Future<int> sisaStok(Database db, int productId) async {
     final p = (await db.query('products', where:'id=?', whereArgs:[productId])).first;

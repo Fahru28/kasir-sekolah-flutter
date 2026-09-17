@@ -13,6 +13,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   List<Map<String, dynamic>> data = [];
+  Map<int,int> stocks = {};
   String q = '';
   String kat = 'Semua';
 
@@ -25,6 +26,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Future<void> _load() async {
     final db = await AppDatabase.database;
     data = await db.query('products', orderBy: 'name');
+    // batch hitung stok sekali (cepat untuk ribuan barang, hindari N+1 FutureBuilder)
+    stocks = await AppDatabase.stocksMap(db);
     if (mounted) setState(() {});
   }
 
@@ -84,15 +87,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
               itemCount: filtered.length,
               itemBuilder: (_, i) {
                 final prod = filtered[i];
-                return FutureBuilder<int>(
-                  future: () async {
-                    final db = await AppDatabase.database;
-                    return AppDatabase.sisaStok(db, prod['id'] as int);
-                  }(),
-                  builder: (_, snap) {
-                    final stok = snap.data ?? 0;
-                    final low = stok <= (prod['min_stock'] as int);
-                    return Card(
+                final stok = stocks[prod['id'] as int] ?? 0;
+                final low = stok <= (prod['min_stock'] as int);
+                return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       child: ListTile(
                         title: Text(prod['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -134,8 +131,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         onLongPress: () => _editStok(prod, stok),
                       ),
                     );
-                  },
-                );
               },
             ),
           ),
