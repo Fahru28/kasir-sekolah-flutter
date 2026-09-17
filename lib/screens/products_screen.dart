@@ -186,20 +186,37 @@ class _ProductsScreenState extends State<ProductsScreen> {
       String cv(int idx) => row.length > idx && row[idx]?.value != null ? row[idx]!.value.toString().trim() : '';
       if (cv(0).isEmpty || cv(1).isEmpty) continue;
       try {
-        await db.insert('products', {
-          'code': cv(0),
-          'name': cv(1),
-          'category': cv(2).isEmpty ? 'Lain-lain' : cv(2),
-          'unit': cv(3).isEmpty ? 'Pcs' : cv(3),
-          'cost_price': int.tryParse(cv(4)) ?? 0,
-          'selling_price': int.tryParse(cv(5)) ?? 0,
-          'initial_stock': int.tryParse(cv(6)) ?? 0,
-          'min_stock': int.tryParse(cv(7)) ?? 5,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        // upsert: if kode sudah ada, update bukan duplikat error
+        final existing = await db.query('products', where: 'code=?', whereArgs: [cv(0)]);
+        if (existing.isNotEmpty) {
+          await db.update('products', {
+            'name': cv(1),
+            'category': cv(2).isEmpty ? 'Lain-lain' : cv(2),
+            'unit': cv(3).isEmpty ? 'Pcs' : cv(3),
+            'cost_price': int.tryParse(cv(4)) ?? 0,
+            'selling_price': int.tryParse(cv(5)) ?? 0,
+            'min_stock': int.tryParse(cv(7)) ?? 5,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, where: 'code=?', whereArgs: [cv(0)]);
+        } else {
+          await db.insert('products', {
+            'code': cv(0),
+            'name': cv(1),
+            'category': cv(2).isEmpty ? 'Lain-lain' : cv(2),
+            'unit': cv(3).isEmpty ? 'Pcs' : cv(3),
+            'cost_price': int.tryParse(cv(4)) ?? 0,
+            'selling_price': int.tryParse(cv(5)) ?? 0,
+            'initial_stock': int.tryParse(cv(6)) ?? 0,
+            'min_stock': int.tryParse(cv(7)) ?? 5,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
         ok++;
-      } catch (_) {}
+      } catch (e) {
+        // tampilkan error di debug, jangan diam
+        debugPrint('Import baris \$i gagal: \$e');
+      }
     }
     _load();
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import selesai: $ok baris')));
@@ -236,21 +253,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           FilledButton(
             onPressed: () async {
-              final db = await AppDatabase.database;
-              await db.insert('products', {
-                'code': code.text,
-                'name': name.text,
-                'category': cat.text,
-                'unit': unit.text,
-                'cost_price': int.tryParse(modal.text) ?? 0,
-                'selling_price': int.tryParse(jual.text) ?? 0,
-                'initial_stock': int.tryParse(awal.text) ?? 0,
-                'min_stock': int.tryParse(min.text) ?? 5,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              });
-              if (context.mounted) Navigator.pop(context);
-              _load();
+              if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode & Nama wajib diisi')));
+                return;
+              }
+              try {
+                final db = await AppDatabase.database;
+                await db.insert('products', {
+                  'code': code.text.trim(),
+                  'name': name.text.trim(),
+                  'category': cat.text.trim().isEmpty ? 'Lain-lain' : cat.text.trim(),
+                  'unit': unit.text.trim().isEmpty ? 'Pcs' : unit.text.trim(),
+                  'cost_price': int.tryParse(modal.text) ?? 0,
+                  'selling_price': int.tryParse(jual.text) ?? 0,
+                  'initial_stock': int.tryParse(awal.text) ?? 0,
+                  'min_stock': int.tryParse(min.text) ?? 5,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+                if (context.mounted) Navigator.pop(context);
+                _load();
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Barang ditambahkan')));
+              } catch (e) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal simpan: \$e (kode mungkin sudah ada)')));
+              }
             },
             child: const Text('Simpan'),
           ),
@@ -332,11 +358,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
               final add = int.tryParse(jml.text) ?? 0;
               if (add <= 0) return;
               final db = await AppDatabase.database;
-              await db.insert('stock_ins', {
+              await db.insert('stock_entries', {
+                'number': 'ADJ-\${DateTime.now().millisecondsSinceEpoch}',
+                'entry_date': DateTime.now().toIso8601String().substring(0,10),
+                'supplier': 'Penyesuaian stok',
                 'product_id': prod['id'],
                 'quantity': add,
+                'cost_price': prod['cost_price'],
                 'note': 'Tambah stok manual',
                 'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
               });
               if (context.mounted) Navigator.pop(context);
               _load();

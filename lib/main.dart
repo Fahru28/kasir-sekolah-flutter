@@ -40,14 +40,29 @@ class _HomeTabsState extends State<HomeTabs> {
         }),
       ])),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: idx > 4 ? 0 : idx,
-        onDestinationSelected:(v)=> setState(()=> idx=v),
+        selectedIndex: idx <= 3 ? idx : (idx == 4 ? 4 : 4),
+        onDestinationSelected:(v){
+          if(v==4){
+            // Lainnya -> buka sheet pilihan
+            showModalBottomSheet(context: context, builder:(ctx)=> SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children:[
+              ListTile(leading: const Icon(Icons.receipt_long), title: const Text('Penjualan'), onTap:(){ Navigator.pop(ctx); setState(()=> idx=4); }),
+              ListTile(leading: const Icon(Icons.account_balance_wallet), title: const Text('Piutang'), onTap:(){ Navigator.pop(ctx); setState(()=> idx=5); }),
+              ListTile(leading: const Icon(Icons.input), title: const Text('Stok Masuk'), onTap:(){ Navigator.pop(ctx); setState(()=> idx=6); }),
+              ListTile(leading: const Icon(Icons.assessment), title: const Text('Laporan'), onTap:(){ Navigator.pop(ctx); setState(()=> idx=7); }),
+              ListTile(leading: const Icon(Icons.backup), title: const Text('Backup & Restore'), onTap:(){ Navigator.pop(ctx); setState(()=> idx=8); }),
+              const Divider(),
+              ListTile(leading: const Icon(Icons.menu), title: const Text('Buka menu lengkap (geser dari kiri)'), onTap:(){ Navigator.pop(ctx); Scaffold.of(context).openDrawer(); }),
+            ])));
+          } else {
+            setState(()=> idx=v);
+          }
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label:'Dashboard'),
           NavigationDestination(icon: Icon(Icons.point_of_sale_outlined), selectedIcon: Icon(Icons.point_of_sale), label:'Kasir'),
           NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label:'Barang'),
           NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label:'Siswa'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label:'Penjualan'),
+          NavigationDestination(icon: Icon(Icons.more_horiz), selectedIcon: Icon(Icons.more_horiz), label:'Lainnya'),
         ],
       ),
     );

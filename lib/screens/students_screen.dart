@@ -125,20 +125,36 @@ class _StudentsScreenState extends State<StudentsScreen> {
       String cv(int idx) => row.length > idx && row[idx]?.value != null ? row[idx]!.value.toString().trim() : '';
       if (cv(2).isEmpty) continue;
       try {
-        await db.insert('students', {
-          'code': cv(0).isEmpty ? 'A-\${DateTime.now().millisecondsSinceEpoch}' : cv(0),
-          'nis': cv(1),
-          'name': cv(2),
-          'class_name': cv(3).isEmpty ? '1A' : cv(3),
-          'guardian_name': cv(4),
-          'phone': cv(5),
-          'address': cv(6),
-          'active': 1,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        final codeVal = cv(0).isEmpty ? 'A-\${DateTime.now().millisecondsSinceEpoch}' : cv(0);
+        final existing = await db.query('students', where: 'code=?', whereArgs: [codeVal]);
+        if (existing.isNotEmpty) {
+          await db.update('students', {
+            'nis': cv(1),
+            'name': cv(2),
+            'class_name': cv(3).isEmpty ? '1A' : cv(3),
+            'guardian_name': cv(4),
+            'phone': cv(5),
+            'address': cv(6),
+            'updated_at': DateTime.now().toIso8601String(),
+          }, where: 'code=?', whereArgs: [codeVal]);
+        } else {
+          await db.insert('students', {
+            'code': codeVal,
+            'nis': cv(1),
+            'name': cv(2),
+            'class_name': cv(3).isEmpty ? '1A' : cv(3),
+            'guardian_name': cv(4),
+            'phone': cv(5),
+            'address': cv(6),
+            'active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
         ok++;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Import siswa baris \$i gagal: \$e');
+      }
     }
     _load();
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import selesai: $ok baris')));
@@ -173,21 +189,30 @@ class _StudentsScreenState extends State<StudentsScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           FilledButton(
             onPressed: () async {
-              final db = await AppDatabase.database;
-              await db.insert('students', {
-                'code': code.text,
-                'nis': nis.text,
-                'name': name.text,
-                'class_name': kelas.text,
-                'guardian_name': wali.text,
-                'phone': wa.text,
-                'address': alamat.text,
-                'active': 1,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              });
-              if (context.mounted) Navigator.pop(context);
-              _load();
+              if (name.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nama wajib diisi')));
+                return;
+              }
+              try {
+                final db = await AppDatabase.database;
+                await db.insert('students', {
+                  'code': code.text.trim().isEmpty ? 'A-\${DateTime.now().millisecondsSinceEpoch}' : code.text.trim(),
+                  'nis': nis.text.trim(),
+                  'name': name.text.trim(),
+                  'class_name': kelas.text.trim().isEmpty ? '1A' : kelas.text.trim(),
+                  'guardian_name': wali.text.trim(),
+                  'phone': wa.text.trim(),
+                  'address': alamat.text.trim(),
+                  'active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+                if (context.mounted) Navigator.pop(context);
+                _load();
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Siswa ditambahkan')));
+              } catch (e) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal simpan: \$e')));
+              }
             },
             child: const Text('Simpan'),
           ),
